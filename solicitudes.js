@@ -3,6 +3,8 @@ import client from "./conexiones/ws.js";
 import ObtenerListaDeProductosEnTexto, {
   ActualizarTotalDeProductosDelCarrito,
   ObtenerNuevasExistenciasDeUnProducto,
+  ObtenerProductoValidado,
+  ObtenerProductoValidadoActual,
   ObtenerProductosPorCategoria,
   ValidarSiExisteUnProducto,
   obtenerProductosSinLosDosDigitosSobrantes,
@@ -27,7 +29,8 @@ import {
   EnviarEmailDeConfirmacionDePedido,
   EnviarEmailDeEnvioDePedido,
   EnviarEmailDeEntregaDePedido,
-} from "./conexiones/email.js";
+  EnviarEmailDeRestablecimientoDePedido,
+} from "./conexiones/emailNode.js";
 import cjson from "compressed-json";
 import subirImagenACloudi from "./imagenes/imagenes.js";
 
@@ -211,7 +214,7 @@ const obtenerExcelDePedido = async (req, res) => {
     if (!pedido) {
       res.send("No encontrado").status(404);
     } else {
-      ObtenerLibro(pedido.productos, res, pedido.nombre);
+      ObtenerLibro(pedido.productos, res, pedido.nombre, pedido.tipo);
     }
   } catch (err) {
     console.log(err);
@@ -315,29 +318,31 @@ const ValidarLosProductosDelCarrito = async (req, res) => {
   let { carrito } = req.body;
   let nuevoCarrito = { ...carrito };
   nuevoCarrito.productos = [];
-  const productos = JSON.parse(await ObtenerArchivoDeProductos());
+  const productos = JSON.parse(ObtenerArchivoDeProductos());
   const productosDescomprimidos = cjson.decompress(productos);
   carrito.productos.map((producto) => {
-    let nuevasExistencias = ObtenerNuevasExistenciasDeUnProducto(
+    let productoActualizado = ObtenerProductoValidado(
       productosDescomprimidos,
       producto
     );
-    let productoValidado = { ...producto };
-    productoValidado.inventario = nuevasExistencias;
-    nuevoCarrito.productos.push(productoValidado);
+    if (productoActualizado !== undefined) {
+      nuevoCarrito.productos.push(productoActualizado);
+    }
   });
   let carritoActualizadoFinal = ActualizarTotalDeProductosDelCarrito(
-    nuevoCarrito.productos,
-    nuevoCarrito.id,
-    false,
-    nuevoCarrito.tipo
+    nuevoCarrito,
+    nuevoCarrito.productos
   );
   res.send(carritoActualizadoFinal);
 };
 
 const GestionarEstatusDePedido = async (req, res) => {
   let { idDePedido, email, nuevoEstado, total } = req.body;
-  console.log(idDePedido, email, nuevoEstado);
+  let reprocesado = false;
+  if (nuevoEstado === "Reprocesado") {
+    nuevoEstado = "Procesado";
+    reprocesado = true;
+  }
   try {
     Pedido.findOneAndUpdate(
       { id: idDePedido, email: email },
@@ -345,7 +350,9 @@ const GestionarEstatusDePedido = async (req, res) => {
     )
       .then((response) => {
         if (response) {
-          if (nuevoEstado === "Procesado") {
+          if (reprocesado) {
+            EnviarEmailDeRestablecimientoDePedido(res, idDePedido, email);
+          } else if (nuevoEstado === "Procesado") {
             EnviarEmailDeConfirmacionDePedido(res, total, idDePedido, email);
           } else if (nuevoEstado === "Enviado") {
             EnviarEmailDeEnvioDePedido(res, idDePedido, email);

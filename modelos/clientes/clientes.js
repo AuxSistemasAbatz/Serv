@@ -44,6 +44,9 @@ const ClientesSchema = mongoose.Schema({
   encriptado: {
     type: Boolean,
   },
+  fechaDeUltimoAcceso: {
+    type: String,
+  },
 });
 
 const Cliente = mongoose.model("Clientes", ClientesSchema);

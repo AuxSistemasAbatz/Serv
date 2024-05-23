@@ -15,9 +15,10 @@ const CrearPago = (req, res) => {
   payment
     .create({ body })
     .then((response) => {
+      console.log(response.status, response.status_detail);
       res.send(response);
     })
-    .catch((error) => console.log(error));
+    .catch((error) => console.log("error", error));
 };
 
 export default CrearPago;

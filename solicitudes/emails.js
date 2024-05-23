@@ -1,4 +1,7 @@
-import EnviarEmail, { EnviarEmailDeContra } from "../conexiones/email.js";
+import EnviarEmail, {
+  EnviarEmailDeContra,
+  EnviarEmailDeDiaDeEnvio,
+} from "../conexiones/emailNode.js";
 import { crearIdDeSolicitud, guardadoDeNuevaSolicitud } from "./solicitudes.js";
 
 const enviarEmail = (req, res) => {
@@ -14,4 +17,9 @@ const enviarEmailDeContra = async (req, res) => {
   EnviarEmailDeContra(correo, nuevoId);
 };
 
-export { enviarEmail, enviarEmailDeContra };
+const EnviarAvisoDeDiaDeEnvio = async (req, res) => {
+  let { correo, id, dia } = req.body;
+  EnviarEmailDeDiaDeEnvio(res, id, correo, dia);
+};
+
+export { enviarEmail, enviarEmailDeContra, EnviarAvisoDeDiaDeEnvio };

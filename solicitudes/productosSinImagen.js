@@ -1,3 +1,4 @@
+import { CrearLibroDeProductosSinImagen } from "../excel/CreacionDeExcelDeProductosSinImagen.js";
 import { Productos } from "../modelos/productosSinImagen/Productos.js";
 
 const agregarProductoSinImagen = async (req, res) => {
@@ -115,10 +116,24 @@ const AgregarProductosSinImagenNuevo = async (req, res) => {
   }
 };
 
+const CrearExcelDeProductosSinImagen = async (req, res) => {
+  try {
+    const data = await Productos.find({});
+    if (!data) {
+      res.status(404).json({ status: "No se encontraron" });
+    } else {
+      CrearLibroDeProductosSinImagen(data, res);
+    }
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 export {
   agregarProductoSinImagen,
   obtenerProductosSinImagen,
   eliminarProductoSinImagen,
   EliminarVariosProductosSinImagen,
   AgregarProductosSinImagenNuevo,
+  CrearExcelDeProductosSinImagen,
 };

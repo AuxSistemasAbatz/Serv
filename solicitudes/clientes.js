@@ -1,8 +1,6 @@
 import dotenv from "dotenv";
 import { Cliente } from "../modelos/clientes/clientes.js";
-import { response } from "express";
 import {
-  EncriptarDatosDeCliente,
   EncriptarDatosDeEnvio,
   EncriptarDatosDeFacturacion,
   desencriptarCorreo,
@@ -22,6 +20,9 @@ const registrarCliente = async (req, res) => {
 
   let correoEncriptado = encriptarCorreo(correo.toLowerCase());
   let contraEncriptada = encriptarContra(contrasena);
+  let fechaActual = new Date();
+  fechaActual = fechaActual.toString();
+
   const nuevoCliente = new Cliente({
     correo: correoEncriptado,
     contrasena: contraEncriptada,
@@ -44,6 +45,7 @@ const registrarCliente = async (req, res) => {
     },
     pedidos: [],
     encriptado: true,
+    fechaDeUltimoAcceso: fechaActual,
   });
 
   try {
@@ -84,10 +86,13 @@ const revisarSiExisteUnCliente = async (req, res) => {
 
 const iniciarSesion = async (req, res) => {
   let { correo, contra } = req.body;
+  let correoEncriptado = encriptarCorreo(correo.toLowerCase());
+  let contrasenaEncriptada = encriptarContra(contra);
+
   try {
     const data = await Cliente.find({
-      correo: encriptarCorreo(correo.toLowerCase()),
-      contrasena: encriptarContra(contra),
+      correo: correoEncriptado,
+      contrasena: contrasenaEncriptada,
     });
     if (data) {
       if (data.length >= 1) {
@@ -99,6 +104,25 @@ const iniciarSesion = async (req, res) => {
           ),
           pedidos: data[0].pedidos,
         };
+        let fechaActual = new Date();
+        fechaActual = fechaActual.toString();
+
+        Cliente.findOneAndUpdate(
+          {
+            correo: correoEncriptado,
+            contrasena: contrasenaEncriptada,
+          },
+          { fechaDeUltimoAcceso: fechaActual }
+        )
+          .then((res) => {
+            console.log(
+              "Fecha de ultimo acceso de " + datosADevolver.infodeenvio.nombre,
+              fechaActual
+            );
+          })
+          .catch((err) => {
+            console.log("Error en sistema de fechas", err);
+          });
         res.status(200).send({
           status: "ok",
           datos: { ...datosADevolver },
@@ -146,7 +170,7 @@ const modificarDatosDeEnvioDelCliente = async (req, res) => {
     Cliente.findOneAndUpdate(
       { correo: encriptarCorreo(correoDelCliente) },
       {
-        infodeenvio: nuevosDatosDeEnvio,
+        infodeenvio: EncriptarDatosDeEnvio(nuevosDatosDeEnvio),
       }
     )
       .then((respuesta) => {
@@ -165,10 +189,13 @@ const modificarDatosDeFacturacionDelCliente = async (req, res) => {
   let { correoDelCliente, nuevosDatosDeFacturacion } = req.body;
   try {
     let correoEncriptado = encriptarCorreo(correoDelCliente);
+    let datosEncriptados = EncriptarDatosDeFacturacion({
+      ...nuevosDatosDeFacturacion,
+    });
     Cliente.findOneAndUpdate(
       { correo: correoEncriptado },
       {
-        infodefacturacion: { ...nuevosDatosDeFacturacion },
+        infodefacturacion: { ...datosEncriptados },
       }
     )
       .then((respuesta) => {
@@ -184,13 +211,12 @@ const modificarDatosDeFacturacionDelCliente = async (req, res) => {
 };
 
 const cambiarContrasena = async (req, res) => {
-  let { correo, contrasena, nuevaContrasena } = req.body;
+  let { correo, nuevaContrasena } = req.body;
   let correoConFormato = encriptarCorreo(correo.toLowerCase());
-  let contrasenaEncriptada = encriptarContra(contrasena);
   let nuevaContrasenaEncriptada = encriptarContra(nuevaContrasena);
   try {
     Cliente.findOneAndUpdate(
-      { correo: correoConFormato, contrasena: contrasenaEncriptada },
+      { correo: correoConFormato },
       { contrasena: nuevaContrasenaEncriptada }
     )
       .then((response) => {
@@ -286,6 +312,7 @@ const ObtenerListaDeClientesDesencriptados = async (req, res) => {
           infodeenvio: infoDeEnvioDesencriptada,
           infodefacturacion: infoDeFacturacionDesencriptada,
           pedidos: cliente.pedidos,
+          fechaDeUltimoAcceso: cliente.fechaDeUltimoAcceso,
         });
       });
       let data = clientesDesencriptados;
@@ -293,6 +320,23 @@ const ObtenerListaDeClientesDesencriptados = async (req, res) => {
     });
   } catch (err) {
     res.send(err);
+  }
+};
+
+const ObtenerPedidosDeUnCliente = async (req, res) => {
+  let { correo } = req.body;
+  try {
+    Cliente.find({ correo: encriptarCorreo(correo.toLowerCase()) }).then(
+      (clienteEncontrado) => {
+        if (clienteEncontrado) {
+          res.send({ status: "ok", pedidos: clienteEncontrado[0].pedidos });
+        } else {
+          res.send({ status: "notok" });
+        }
+      }
+    );
+  } catch (error) {
+    console.log(error);
   }
 };
 
@@ -308,4 +352,5 @@ export {
   ObtenerTodosLosClientes,
   EncriptarDatosExtrasDeClientes,
   ObtenerListaDeClientesDesencriptados,
+  ObtenerPedidosDeUnCliente,
 };

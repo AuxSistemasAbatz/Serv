@@ -1,0 +1,8 @@
+#dependences
+/node_modules
+/deprecados
+qrEnSvg.svg
+.env
+nodemon.json
+/.wwebjs_cache
+BackupDeDBDeClientes.json

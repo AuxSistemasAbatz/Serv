@@ -1,5 +1,23 @@
 import emailjs from "@emailjs/nodejs";
 import ObtenerListaDeProductosEnTexto from "../utilidades/utility.js";
+import client from "./ws.js";
+
+const EnviarMensajeALogistica = async (mensaje) => {
+  if (client.info) {
+    const chats = await client.getChats();
+    const groups = chats
+      .filter((chat) => chat.isGroup && chat.name == "LogisticaPagina")
+      .map((chat) => {
+        return {
+          id: chat.id._serialized,
+          name: chat.name,
+        };
+      });
+    client.sendMessage(groups[0].id, mensaje);
+  } else {
+    console.log("No has iniciado sesion en whatsapp");
+  }
+};
 
 const EnviarEmail = async (tipodecliente, nombre, email, telefono, mensaje) => {
   let mensajeCompleto =
@@ -12,7 +30,7 @@ const EnviarEmail = async (tipodecliente, nombre, email, telefono, mensaje) => {
     " escribio el siguiente mensaje: " +
     mensaje;
   let template_params = {
-    para: "sistemasabarrotera@gmail.com",
+    para: "facturaciondeabatz@gmail.com",
     titulo: nombre,
     mensaje: mensajeCompleto,
   };
@@ -63,6 +81,7 @@ const EnviarEmailDePedido = async (pedido) => {
     })
     .catch((error) => console.log(error));
 };
+
 const EnviarEmailDeContra = async (correo, id) => {
   let mensaje =
     "Si desea cambiar su contraseña puede dar click al siguiente enlace: https://www.abatz.com.mx/recuperar/" +
@@ -143,7 +162,32 @@ const EnviarEmailDeProcesoDePedido = async (pedido, correo) => {
     )
     .then(
       (response) => {
-        console.log("Hecho", response.status);
+        let mensaje =
+          "Hay un nuevo pedido con ID: " +
+          pedido.id +
+          " con el total de $" +
+          pedido.total;
+
+        let template_params = {
+          para: "facturaciondeabatz@gmail.com",
+          titulo: "Nuevo pedido en Abatz.com.mx",
+          mensaje: mensaje,
+        };
+        emailjs
+          .send(
+            process.env.API_EMAILJS_USER_ID,
+            process.env.API_EMAILJS_TEMPLATE_ID,
+            template_params,
+            {
+              publicKey: process.env.API_EMAILJS_PUBLIC_KEY,
+              privateKey: process.env.API_EMAILJS_PRIVATE_KEY,
+            }
+          )
+          .then(
+            (response) => {},
+            (error) => console.log(error)
+          );
+        console.log("Pedido procesado", response.status);
       },
       (error) => console.log(error)
     );
@@ -174,6 +218,31 @@ const EnviarEmailDeConfirmacionDePedido = async (res, total, id, correo) => {
     )
     .then(
       (response) => {
+        let mensaje =
+          "Hay un nuevo pedido procesado.El total del pedido es: " +
+          total +
+          " El ID es: " +
+          id;
+        let template_params = {
+          para: "logisticaenviosabatz@gmail.com",
+          titulo: "Nuevo pedido en ABATZ con ID" + id,
+          mensaje: mensaje,
+        };
+        emailjs
+          .send(
+            process.env.API_EMAILJS_USER_ID,
+            process.env.API_EMAILJS_TEMPLATE_ID,
+            template_params,
+            {
+              publicKey: process.env.API_EMAILJS_PUBLIC_KEY,
+              privateKey: process.env.API_EMAILJS_PRIVATE_KEY,
+            }
+          )
+          .then((response) => {
+            console.log("Email enviado a logistica", response.status);
+          })
+          .catch((error) => console.log(error));
+        EnviarMensajeALogistica(mensaje);
         res.status(200).send({ estatus: "ok" });
       },
       (error) => {
@@ -222,8 +291,7 @@ const EnviarEmailDeEntregaDePedido = async (res, id, correo) => {
     id +
     " han sido entregados. Te esperamos de nuevo en https://www.abatz.com.mx .+" +
     "\n\n" +
-    "Que tengas un excelente día." +
-    id;
+    "Que tengas un excelente día.";
   let template_params = {
     para: correo,
     titulo: "Pedido entregado",
@@ -250,13 +318,41 @@ const EnviarEmailDeEntregaDePedido = async (res, id, correo) => {
     );
 };
 
-export default EnviarEmail;
-export {
-  EnviarEmailDePedido,
-  EnviarEmailDeContra,
-  EnviarEmailDeCambioDeContra,
-  EnviarEmailDeProcesoDePedido,
-  EnviarEmailDeConfirmacionDePedido,
-  EnviarEmailDeEnvioDePedido,
-  EnviarEmailDeEntregaDePedido,
+const EnviarEmailDeRestablecimientoDePedido = async (
+  res,
+  id,
+  correo,
+  razon
+) => {
+  let mensaje =
+    "Tu pedido no ha podido ser entregado" +
+    "\n\n" +
+    "Tus productos del pedido con ID: " +
+    id +
+    " no han sido entregados debido a algún problema. Contactaremos contigo pronto para intentar realizar tu entrega de forma adecuada." +
+    "\n\n" +
+    "Que tengas un excelente día.";
+  let template_params = {
+    para: correo,
+    titulo: "No se pudo realizar la entrega de tu pedido",
+    mensaje: mensaje,
+  };
+  emailjs
+    .send(
+      process.env.API_EMAILJS_USER_ID,
+      process.env.API_EMAILJS_TEMPLATE_ID,
+      template_params,
+      {
+        publicKey: process.env.API_EMAILJS_PUBLIC_KEY,
+        privateKey: process.env.API_EMAILJS_PRIVATE_KEY,
+      }
+    )
+    .then(
+      (response) => {
+        res.status(200).send({ estatus: "ok" });
+      },
+      (error) => {
+        res.status(400).send({ estatus: "error" });
+      }
+    );
 };

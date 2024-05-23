@@ -31,6 +31,7 @@ import {
   eliminarProductoSinImagen,
   EliminarVariosProductosSinImagen,
   AgregarProductosSinImagenNuevo,
+  CrearExcelDeProductosSinImagen,
 } from "./solicitudes/productosSinImagen.js";
 import {
   eliminarVacante,
@@ -47,6 +48,7 @@ import conectarConClientes from "./modelos/clientes/clientes.js";
 import {
   EncriptarDatosExtrasDeClientes,
   ObtenerListaDeClientesDesencriptados,
+  ObtenerPedidosDeUnCliente,
   ObtenerTodosLosClientes,
   cambiarContrasena,
   iniciarSesion,
@@ -67,7 +69,6 @@ import {
   cambiarContraConCorreo,
   recuperarDatos,
 } from "./solicitudes/solicitudes.js";
-import { enviarEmail, enviarEmailDeContra } from "./solicitudes/emails.js";
 import {
   EncriptarDatosDeCliente,
   desencriptarContra,
@@ -77,11 +78,50 @@ import {
 import ActualizarArchivos from "./base/ActualizacionDeArchivos.js";
 import {
   ActualizarLasOfertas,
+  ObtenerCantidadDeParteProductos,
+  ObtenerHojaDeProductos,
+  ObtenerInformacionDeProductos,
   ObtenerProductosDeVariable,
+  ObtenerProductosDeVariableConCategoria,
 } from "./solicitudes/productos.js";
 import { CrearOrdenDePago, crearCobro } from "./solicitudes/Pagos.js";
 import FinalizarPedido from "./solicitudes/Pedido.js";
 import CrearPago from "./solicitudes/PagosV3.js";
+import conectarConProductosExcluidos from "./modelos/ProductosExcluidos/ProductosExcluidos.js";
+import {
+  CrearProductoExcluido,
+  EliminarProductoExcluido,
+  ObtenerProductosExcluidos,
+} from "./solicitudes/ProductosExcluidos.js";
+import { ObtenerImagenDeQr } from "./conexiones/ws.js";
+import MostrarQrEnTerminal from "./solicitudes/Qr.js";
+import ConectarConConfiguracion from "./modelos/Configuraciones/configuraciones.js";
+import {
+  AjustarConfiguracion,
+  ConfigurarPorPrimeraVez,
+  ObtenerConfiguracion,
+} from "./solicitudes/Configuracion.js";
+import EnviarEmail, { EnviarEmailDeContra } from "./conexiones/emailNode.js";
+import { EnviarMensajeDeSolicitudDeTransferidoDeMercanciaPorWhatsApp } from "./solicitudes/Mensajes.js";
+import {
+  EnviarAvisoDeDiaDeEnvio,
+  enviarEmailDeContra,
+} from "./solicitudes/emails.js";
+
+//import { AESEncryptString } from "./encriptado/Encriptadov3.js";
+import GenerarClave from "./encriptado/NuevoEncriptadoFinal.js";
+import { EncriptarDatosDeBN } from "./encriptado/NuevoEncriptadoFinalModificado.js";
+import conectarConVisitas from "./modelos/analiticas/visitas.js";
+import {
+  AplicarVisita,
+  InicializarTodasLasVisitas,
+} from "./solicitudes/analiticas.js";
+import ConectarConCarritos from "./modelos/carritos/carritos.js";
+import {
+  ActualizarCarrito,
+  CrearCarrito,
+  ObtenerCarritoYValidar,
+} from "./solicitudes/carritos.js";
 
 dotenv.config();
 const PUERTO1 = process.env.PUERTO;
@@ -100,6 +140,15 @@ const listaDeDominios = [
   process.env.URL9,
   process.env.URL10,
   process.env.URL11,
+  process.env.URL12,
+  process.env.URL13,
+  process.env.URL14,
+  process.env.URL15,
+  process.env.URL16,
+  process.env.URL17,
+  process.env.URL18,
+  process.env.URL19,
+  process.env.URL20,
 ];
 
 const opcionesDeCors = {
@@ -129,10 +178,27 @@ App.get(
   obtenerListaDeProductosRealacionados
 );
 App.get("/productosDeVariable", ObtenerProductosDeVariable);
+App.get("/ObtenerImagenDeQr", ObtenerImagenDeQr);
+App.get("/ObtenerConfiguracion", ObtenerConfiguracion);
+App.get(
+  "/ObtenerReporteEnExcelDeProductosSinImagen",
+  CrearExcelDeProductosSinImagen
+);
+App.get("/obtenerClientes", ObtenerTodosLosClientes);
+App.get("/obtenerClientesDes", ObtenerListaDeClientesDesencriptados);
+App.get("/obtenerProductosExcluidos", ObtenerProductosExcluidos);
+App.get(
+  "/productosDeVariable/:categoria",
+  ObtenerProductosDeVariableConCategoria
+);
+/*
+Este endpoint permite inicializar a 0 las visitas de todas las paginas
+App.get("/InicializarTodasLasVisitas", InicializarTodasLasVisitas);
+*/
 
 App.post("/pagar", pagar);
 App.post("/pagarv2", pagarv2);
-App.post("/EnviarEmail", enviarEmail);
+App.post("/EnviarEmail", EnviarEmail);
 App.post("/agregarProductoSinImagen", AgregarProductosSinImagenNuevo);
 App.post("/realizarpedido", realizarpedido);
 App.post("/pedirId", pedirId);
@@ -184,11 +250,29 @@ App.post("/crearCobro", crearCobro);
 App.post("/finalizarPedido", FinalizarPedido);
 App.post("/efectuarPago", CrearPago);
 App.post("/actualizarofertas", ActualizarLasOfertas);
-App.get("/obtenerClientes", ObtenerTodosLosClientes);
-App.get("/obtenerClientesDes", ObtenerListaDeClientesDesencriptados);
+App.post("/crearProductoExcluido", CrearProductoExcluido);
+App.post("/eliminarProductoExcluido", EliminarProductoExcluido);
+App.post("/obtenerPedidosDeUnCliente", ObtenerPedidosDeUnCliente);
+App.post("/GenerarQr", MostrarQrEnTerminal);
+App.post("/AjustarConfiguracion", AjustarConfiguracion);
+App.post(
+  "/EnviarSolicitudDeTransferenciaDeMercancia",
+  EnviarMensajeDeSolicitudDeTransferidoDeMercanciaPorWhatsApp
+);
+App.post("/EnviarAvisoDeDiaDeEnvio", EnviarAvisoDeDiaDeEnvio);
+App.post("/ObtenerHojaDeProductos", ObtenerHojaDeProductos);
+App.post("/GenerarClaveBN", GenerarClave);
+App.post("/EncriptarDatosDeBN", EncriptarDatosDeBN);
+App.post("/ObtenerCantidadDeParteProductos", ObtenerCantidadDeParteProductos);
+App.post("/visita", AplicarVisita);
+App.post("/ObtenerListadoDeProductos", ObtenerInformacionDeProductos);
+App.post("/CrearCarrito", CrearCarrito);
+App.post("/ObtenerCarrito", ObtenerCarritoYValidar);
+App.post("/ActualizarCarrito", ActualizarCarrito);
 App.listen(PUERTO1, () => {
   console.log("Servidor escuchando en el puerto: " + PUERTO1);
 });
+
 conectar().catch((err) => console.log(err));
 conectarConUsuarios().catch((err) => console.log(err));
 conectarConVacantes().catch((err) => console.log(err));
@@ -196,10 +280,16 @@ conectarConProductos().catch((err) => console.log(err));
 conectarConClientes().catch((err) => console.log(err));
 conectarConBaseDeErrores().catch((err) => console.log(err));
 conectarConSolicitudes().catch((err) => console.log(err));
+conectarConProductosExcluidos().catch((err) => console.log(err));
+ConectarConConfiguracion().catch((err) => console.log(err));
+conectarConVisitas().catch((err) => console.log(err));
+ConectarConCarritos().catch((err) => console.log(err));
+
+ActualizarArchivos();
 
 setInterval(() => {
   ActualizarArchivos(false);
-}, 4 * 60 * 1000);
+}, 2 * 60 * 1000);
 
 setInterval(() => {
   axios

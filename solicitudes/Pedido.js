@@ -8,26 +8,43 @@ import client from "../conexiones/ws.js";
 import {
   EnviarEmailDePedido,
   EnviarEmailDeProcesoDePedido,
-} from "../conexiones/email.js";
+} from "../conexiones/emailNode.js";
 import { actualizarPedidosDelCliente } from "./clientes.js";
+import ObtenerListaDeProductosEnTexto from "../utilidades/utility.js";
 
 const EnviarMensajeDeWhatsAppDePedido = async (pedido) => {
   let { id, nombre, email, telefono, direccion, total, productos } = pedido;
+
   if (client.info) {
     const chats = await client.getChats();
     const groups = chats
-      .filter((chat) => chat.isGroup && chat.name == "Pedidos beta")
+      .filter((chat) => chat.isGroup && chat.name == "PedidosPagina")
       .map((chat) => {
         return {
           id: chat.id._serialized,
           name: chat.name,
         };
       });
-    let cadenaDeInformacionDelCliente = `Pedido: ${id}\nCliente: ${nombre}\nCorreo: ${email}\n${
-      telefono ? "Telefono: " + telefono + "\n" : ""
-    }Dirección: ${direccion}\n\n`;
+    let telefonoFormateado = telefono ? "Telefono: " + telefono : "";
+    let cadenaDeInformacionDelCliente =
+      "Pedido: " +
+      id +
+      "\nCliente: " +
+      nombre +
+      "\nCorreo: " +
+      email +
+      "\n" +
+      telefonoFormateado +
+      "\n" +
+      "Dirección: " +
+      direccion +
+      "\n\n";
     let cadenaConEncabezado =
-      `Cantidad de productos: ${productos.length}\nTotal: $${total}\n\n\n` +
+      "Cantidad de productos: " +
+      productos.length +
+      "\nTotal: $" +
+      total +
+      "\n\n\n" +
       ObtenerListaDeProductosEnTexto(productos);
     client.sendMessage(
       groups[0].id,
@@ -39,8 +56,9 @@ const EnviarMensajeDeWhatsAppDePedido = async (pedido) => {
 };
 
 const FinalizarPedido = async (req, res) => {
-  let { infodeenvio, total, ahorro, id, productos, email, tipo } = req.body;
-  let { nombre, calle, numero, codigoPostal, colonia, localidad, telefono } =
+  let { infodeenvio, total, ahorro, id, productos, email, tipo, horario } =
+    req.body;
+  let { nombre, calle, numero, codigopostal, colonia, localidad, telefono } =
     infodeenvio;
   total = parseFloat(total).toFixed(2);
   let direccionCompleta =
@@ -52,7 +70,7 @@ const FinalizarPedido = async (req, res) => {
     ", " +
     localidad +
     ", " +
-    codigoPostal;
+    codigopostal;
   let fecha = new Date();
   let fechaFormateada = ObtenerFechaFormateada(fecha);
   let formatoDePedido = {
@@ -69,6 +87,7 @@ const FinalizarPedido = async (req, res) => {
     recomendacion: "",
     estado: "Por procesar",
     tipo: tipo ? tipo : "envio",
+    horario: horario ? horario : "",
   };
   EnviarEmailDePedido(formatoDePedido);
   EnviarEmailDeProcesoDePedido(formatoDePedido, email);

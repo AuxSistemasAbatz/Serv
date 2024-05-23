@@ -59,6 +59,10 @@ const Pedido = mongoose.model("Pedido", {
     type: String,
     require: true,
   },
+  horario: {
+    type: String,
+    require: true,
+  },
 });
 
 export default conectar;

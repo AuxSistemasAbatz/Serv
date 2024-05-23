@@ -77,15 +77,13 @@ const ObtenerNuevoLibro = (res) => {
   });
 };
 
-const ObtenerLibro = (productos, res, nombre) => {
-  console.log(nombre);
+const ObtenerLibro = (productos, res, nombre, tipo) => {
   let nombreSinEspacios = nombre.replaceAll(" ", "");
   let nombreDeArchivo = "PedidoWebABATZ2023" + nombreSinEspacios;
   XLSX.fromFileAsync("./excel/PedidoPlantilla.xlsx").then(async (workbook) => {
     productos.map((producto, index) => {
       let indexActual = index + 2;
       let {
-        codigo,
         id,
         descripcion,
         unidad,
@@ -94,38 +92,42 @@ const ObtenerLibro = (productos, res, nombre) => {
         precios,
         unidadSeleccionada,
         unidades,
+        preciosMostrador,
       } = producto;
+      let precioSeleccionado = precios[unidadSeleccionada];
+      let precioEspecifico = precio;
+      if (tipo === "sucursal" && preciosMostrador.length > 0) {
+        precioSeleccionado = preciosMostrador[unidadSeleccionada];
+      }
       workbook
         .sheet("FORMATO")
         .cell("A" + indexActual)
         .value(parseInt(id));
-
-      if (Array.isArray(descripcion)) {
-        workbook
-          .sheet("FORMATO")
-          .cell("C" + indexActual)
-          .value(parseInt(cantidad));
+      workbook
+        .sheet("FORMATO")
+        .cell("C" + indexActual)
+        .value(parseInt(cantidad));
+      if (Array.isArray(unidad)) {
         workbook
           .sheet("FORMATO")
           .cell("D" + indexActual)
           .value(unidades[unidadSeleccionada]);
-        workbook
-          .sheet("FORMATO")
-          .cell("E" + indexActual)
-          .value(parseFloat(precios[unidadSeleccionada]));
       } else {
-        workbook
-          .sheet("FORMATO")
-          .cell("C" + indexActual)
-          .value(parseInt(cantidad));
         workbook
           .sheet("FORMATO")
           .cell("D" + indexActual)
           .value(unidad);
+      }
+      if (Array.isArray(precios)) {
         workbook
           .sheet("FORMATO")
           .cell("E" + indexActual)
-          .value(parseFloat(precio));
+          .value(parseFloat(precioSeleccionado));
+      } else {
+        workbook
+          .sheet("FORMATO")
+          .cell("E" + indexActual)
+          .value(parseFloat(precio).toFixed(2));
       }
     });
     return workbook

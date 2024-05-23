@@ -90,88 +90,59 @@ export const ObtenerId = (productos, total) => {
 
 const EnglobarProductos = (arrayDeProductos) => {
   let nuevoArrayDeProductos = [];
-  arrayDeProductos.forEach((producto) => {
-    let idDelProducto = producto.id;
-    if (nuevoArrayDeProductos.length > 1) {
-      let seEncontroProducto = false;
-      let indiceDondeSeEncontro = 0;
-      nuevoArrayDeProductos.forEach((productoYaAgregado, indice) => {
-        if (productoYaAgregado.id.includes(idDelProducto)) {
-          seEncontroProducto = true;
-          indiceDondeSeEncontro = indice;
-        }
-      });
-      if (seEncontroProducto) {
-        let descripcion =
-          nuevoArrayDeProductos[indiceDondeSeEncontro].desc_prod;
-        let unidad = nuevoArrayDeProductos[indiceDondeSeEncontro].unidad;
-        let precio = nuevoArrayDeProductos[indiceDondeSeEncontro].precio;
-        let factor = nuevoArrayDeProductos[indiceDondeSeEncontro].factor;
-        let unidadYaAgregada = false;
-        if (Array.isArray(unidad)) {
-          for (let cont = 0; cont < unidad.length; cont++) {
-            if (producto.unidad === unidad[cont]) {
-              unidadYaAgregada = true;
-            }
-          }
-        } else {
-          if (producto.unidad === unidad) {
-            unidadYaAgregada = true;
-          }
-        }
-        if (!unidadYaAgregada) {
-          if (Array.isArray(descripcion)) {
-            nuevoArrayDeProductos[indiceDondeSeEncontro].desc_prod = [
-              ...descripcion,
-              producto.desc_prod,
-            ];
-          } else {
-            nuevoArrayDeProductos[indiceDondeSeEncontro].desc_prod = [
-              descripcion,
-              producto.desc_prod,
-            ];
-          }
-          if (Array.isArray(unidad)) {
-            nuevoArrayDeProductos[indiceDondeSeEncontro].unidad = [
-              ...unidad,
-              producto.unidad,
-            ];
-          } else {
-            nuevoArrayDeProductos[indiceDondeSeEncontro].unidad = [
-              unidad,
-              producto.unidad,
-            ];
-          }
-          if (Array.isArray(precio)) {
-            nuevoArrayDeProductos[indiceDondeSeEncontro].precio = [
-              ...precio,
-              producto.precio,
-            ];
-          } else {
-            nuevoArrayDeProductos[indiceDondeSeEncontro].precio = [
-              precio,
-              producto.precio,
-            ];
-          }
-          if (Array.isArray(factor)) {
-            nuevoArrayDeProductos[indiceDondeSeEncontro].factor = [
-              ...factor,
-              producto.factor,
-            ];
-          } else {
-            nuevoArrayDeProductos[indiceDondeSeEncontro].factor = [
-              factor,
-              producto.factor,
-            ];
-          }
-        }
+  if (Array.isArray(arrayDeProductos)) {
+    arrayDeProductos.map((producto) => {
+      let productoYaAgregado = nuevoArrayDeProductos.findIndex(
+        (prod) => prod.id === producto.id
+      );
+      if (productoYaAgregado === -1) {
+        let nuevoProducto = {
+          ...producto,
+        };
+        nuevoArrayDeProductos.push(nuevoProducto);
       } else {
-        nuevoArrayDeProductos.push(producto);
+        let indice = productoYaAgregado;
+        let unidadEncontrada = Array.isArray(
+          nuevoArrayDeProductos[indice].unidad
+        )
+          ? nuevoArrayDeProductos[indice].unidad.find(
+              (unidad) => unidad === producto.unidad
+            )
+          : nuevoArrayDeProductos[indice].unidad === producto.unidad;
+        if (!unidadEncontrada) {
+          let unidadesEsArray = Array.isArray(
+            nuevoArrayDeProductos[indice].unidad
+          );
+          let nuevasUnidades = unidadesEsArray
+            ? [...nuevoArrayDeProductos[indice].unidad, producto.unidad]
+            : [nuevoArrayDeProductos[indice].unidad, producto.unidad];
+          let nuevosPrecios = unidadesEsArray
+            ? [...nuevoArrayDeProductos[indice].precio, producto.precio]
+            : [nuevoArrayDeProductos[indice].precio, producto.precio];
+          let nuevosPreciosDeMostrador = unidadesEsArray
+            ? [
+                ...nuevoArrayDeProductos[indice].precioMostrador,
+                producto.precioMostrador,
+              ]
+            : [
+                nuevoArrayDeProductos[indice].precioMostrador,
+                producto.precioMostrador,
+              ];
+          let nuevosFactores = unidadesEsArray
+            ? [...nuevoArrayDeProductos[indice].factor, producto.factor]
+            : [nuevoArrayDeProductos[indice].factor, producto.factor];
+          let nuevoProductoActualizado = {
+            ...nuevoArrayDeProductos[indice],
+            unidad: nuevasUnidades,
+            precio: nuevosPrecios,
+            precioMostrador: nuevosPreciosDeMostrador,
+            factor: nuevosFactores,
+          };
+          nuevoArrayDeProductos[indice] = nuevoProductoActualizado;
+        }
       }
-    } else {
-      nuevoArrayDeProductos.push(producto);
-    }
-  });
+    });
+  }
   return nuevoArrayDeProductos;
 };
 
@@ -223,70 +194,65 @@ const ObtenerProductosPorCategoria = (productosPorCategoria) => {
   return nuevosProductosAleatorios;
 };
 
-const ActualizarTotalDeProductosDelCarrito = (
-  ArrayDeProductos,
-  idDelCarrito,
-  mostrarCarrito,
-  tipo
-) => {
+const ActualizarTotalDeProductosDelCarrito = (carrito, productos) => {
   let total = 0;
-  let ahorrado = 0;
+  let ahorro = 0;
   let cantidadDeProductos = 0;
-  let mostrarCarritoAnt = mostrarCarrito;
-  for (let cont = 0; cont < ArrayDeProductos.length; cont++) {
-    cantidadDeProductos++;
-    let unidadActual = ArrayDeProductos[cont].unidadSeleccionada;
-    let ofertaActual = ArrayDeProductos[cont].oferta;
-    let ahorroActual = Array.isArray(ArrayDeProductos[cont].ahorro)
-      ? ArrayDeProductos[cont].ahorro[unidadActual]
-      : ArrayDeProductos[cont].ahorro;
-    let cantidadActual = ArrayDeProductos[cont].cantidad;
-    let precioActual = 0;
-    if (ofertaActual) {
-      let porcentaje = ArrayDeProductos[cont].porcentaje;
-      precioActual = Array.isArray(ArrayDeProductos[cont].precios)
-        ? ObtenerPrecioConDescuento(
-            ArrayDeProductos[cont].precios[unidadActual],
-            porcentaje
-          )
-        : ObtenerPrecioConDescuento(ArrayDeProductos[cont].precio, porcentaje);
-    } else {
-      precioActual = Array.isArray(ArrayDeProductos[cont].precios)
-        ? ArrayDeProductos[cont].precios[unidadActual]
-        : ArrayDeProductos[cont].precio;
-    }
-    precioActual = Array.isArray(ArrayDeProductos[cont].precios)
-      ? ArrayDeProductos[cont].precios[unidadActual]
-      : ArrayDeProductos[cont].precio;
-    total = total + precioActual * cantidadActual;
-    if (ofertaActual) {
-      ahorrado = ahorrado + ahorroActual * cantidadActual;
-    }
-  }
-  let ArrayOrdenado = ArrayDeProductos.sort((a, b) => {
-    let idA = parseInt(a.id);
-    let idB = parseInt(b.id);
-    if (idA < idB) {
-      return -1;
-    }
-    if (idA === idB) {
-      return 0;
-    }
-    if (idA > idB) {
-      return 1;
+  let subtotal = 0;
+  productos.forEach((producto) => {
+    if (producto !== undefined) {
+      let {
+        precios,
+        preciosMostrador,
+        cantidad,
+        unidadSeleccionada,
+        unidadOferta,
+        unidades,
+        porcentaje,
+      } = producto;
+      let preciosActuales = precios;
+      if (
+        carrito.tipo === "sucursal" &&
+        preciosMostrador !== undefined &&
+        preciosMostrador.length > 0
+      ) {
+        preciosActuales = producto.preciosMostrador;
+      }
+      let precioActual = Array.isArray(preciosActuales)
+        ? preciosActuales[unidadSeleccionada]
+        : preciosActuales;
+      let subtotalActual = parseFloat(precioActual) * parseFloat(cantidad);
+      subtotal += subtotalActual;
+      let ahorroActual = 0;
+      if (
+        unidadOferta === unidades[unidadSeleccionada] &&
+        carrito.tipo !== "sucursal"
+      ) {
+        ahorroActual =
+          parseFloat(precioActual) * (parseFloat(porcentaje) / 100) * cantidad;
+      }
+      ahorro += ahorroActual;
+      total += subtotalActual - ahorroActual;
+      cantidadDeProductos += 1;
     }
   });
-  let carritoADevolver = {
-    total: total,
-    ahorrado: ahorrado,
-    productos: [...ArrayOrdenado],
-    idDeCompra: idDelCarrito,
-    cantidadDeProductos: cantidadDeProductos,
-    mostrarCarrito: mostrarCarritoAnt,
-    tipo: tipo,
+  if (
+    carrito.costoDeEnvio !== 0 &&
+    carrito.costoDeEnvio !== undefined &&
+    carrito.tipo !== "sucursal"
+  ) {
+    total += carrito.costoDeEnvio;
+  }
+  return {
+    ...carrito,
+    total,
+    subtotal,
+    ahorrado: ahorro,
+    cantidadDeProductos,
+    productos,
   };
-  return carritoADevolver;
 };
+
 const ObtenerPrecioSinDescuento = (precio) => {
   let nuevoPrecio = parseFloat(precio);
   let porcentaje = parseFloat(2 / 100);
@@ -317,6 +283,100 @@ const ObtenerNuevasExistenciasDeUnProducto = (productos, productoBuscado) => {
   }
 };
 
+const ObtenerProductoValidadoActual = (productos, productoActual) => {
+  let productoEncontradoYActualizado = { ...productoActual, oferta: false };
+  if (Array.isArray(productos)) {
+    let indiceActual = 0;
+    let ahorros = [];
+    productos.map((producto) => {
+      if (producto.id === productoActual.linkDeImagen) {
+        productoEncontradoYActualizado.descripcion = producto.descripcion1;
+        productoEncontradoYActualizado.unidades[indiceActual] = producto.unidad;
+        productoEncontradoYActualizado.factor[indiceActual] = producto.factor;
+        productoEncontradoYActualizado.precioSinDescuento[indiceActual] =
+          producto.precio;
+        productoEncontradoYActualizado.precios[indiceActual] = producto.precio;
+        if (
+          productoActual.unidades[productoActual.unidadSeleccionada] ===
+          productoActual.unidad
+        ) {
+          producto.unidadSeleccionada = indiceActual;
+        }
+        if (producto.porcentaje !== "0") {
+          productoEncontradoYActualizado.oferta = true;
+          productoEncontradoYActualizado.porcentaje = producto.porcentaje;
+          productoEncontradoYActualizado.unidadOferta = producto.unidadoferta;
+          let precioEnNumero = parseFloat(producto.precio);
+          let porcentajeEnNumero = parseFloat(producto.porcentaje);
+          let ahorro = (precioEnNumero * porcentajeEnNumero) / 100;
+          ahorros[indiceActual] = ahorro.toFixed(2).toString();
+        } else {
+          ahorros[indiceActual] = "0.00";
+        }
+        indiceActual = indiceActual + 1;
+      }
+    });
+    productoEncontradoYActualizado.ahorro = ahorros;
+    productoEncontradoYActualizado.unidad =
+      productoEncontradoYActualizado.unidades[
+        productoEncontradoYActualizado.unidadSeleccionada
+      ];
+    let unidadSeleccionada = productoEncontradoYActualizado.unidadSeleccionada;
+    let unidadOferta = productoEncontradoYActualizado.unidadOferta;
+    let unidades = productoEncontradoYActualizado.unidades;
+    if (unidades[unidadSeleccionada] === unidadOferta) {
+      let porcentaje = productoEncontradoYActualizado.porcentaje;
+      let precioSinDescuento =
+        productoEncontradoYActualizado.precioSinDescuento[unidadSeleccionada];
+      productoEncontradoYActualizado.precio = ObtenerPrecioConDescuento(
+        precioSinDescuento,
+        porcentaje
+      );
+    } else {
+      productoEncontradoYActualizado.precio =
+        productoEncontradoYActualizado.precios[
+          productoEncontradoYActualizado.unidadSeleccionada
+        ];
+    }
+  }
+  return productoEncontradoYActualizado;
+};
+
+const ObtenerProductoValidado = (productos, productoActual) => {
+  let productoEncontradoYActualizado = { ...productoActual, oferta: false };
+  let encontrado = false;
+  if (Array.isArray(productos)) {
+    let idDeProducto = productoEncontradoYActualizado.linkDeImagen;
+    productos.map((producto, index) => {
+      let cont = index;
+      if (producto.id === idDeProducto) {
+        encontrado = true;
+        productoEncontradoYActualizado.unidad = producto.unidad;
+        productoEncontradoYActualizado.precio = producto.precio;
+        productoEncontradoYActualizado.precioMostrador =
+          producto.precioMostrador;
+        productoEncontradoYActualizado.invmostrador = producto.invmostrador;
+        productoEncontradoYActualizado.inventario = producto.inventario;
+        productoEncontradoYActualizado.factor = producto.factor;
+        if (producto.unidadOferta !== null) {
+          productoEncontradoYActualizado.unidadOferta = producto.unidadOferta;
+          productoEncontradoYActualizado.porcentaje = producto.porcentaje;
+          productoEncontradoYActualizado.oferta = true;
+        }
+      }
+    });
+    if (encontrado === true) {
+      return productoEncontradoYActualizado;
+    } else {
+      return undefined;
+    }
+  } else {
+    if (encontrado === false) {
+      return undefined;
+    }
+  }
+};
+
 const JuntarOfertasConProductos = (productos, ofertas) => {
   const nuevosProductos = [];
   let contadorDeOfertas = 0;
@@ -327,14 +387,18 @@ const JuntarOfertasConProductos = (productos, ofertas) => {
     let {
       id,
       unidad,
-      precio,
       descripcion1,
       clase,
       codigo,
       inventario,
       presentacion,
       factor,
+      excluido,
+      unidadExcluida,
+      invmostrador,
     } = productos[cont];
+    let precio = productos[cont]["(precio 3)"];
+    let precioMostrador = productos[cont]["(precio lista)"];
     let productoActual = {
       id,
       unidad,
@@ -347,8 +411,14 @@ const JuntarOfertasConProductos = (productos, ofertas) => {
       factor,
       unidadoferta: null,
       porcentaje: "0",
+      excluido,
+      unidadExcluida,
+      precioMostrador,
+      invmostrador,
     };
     for (let cont2 = 0; cont2 < ofertas.length - 1; cont2++) {
+      let variasUnidades = Array.isArray(productoActual.unidad);
+      let unidades = variasUnidades ? [...productoActual.unidad] : [unidad];
       if (productoActual.id === ofertas[cont2].articulo) {
         contadorDeOfertas++;
         productoActual.unidadoferta = ofertas[cont2].unidad;
@@ -373,6 +443,174 @@ const ObtenerFechaFormateada = (fecha) => {
   return diaEnFormato + "/" + mesEnFormato + "/" + anno;
 };
 
+const ExisteProducto = (productos, producto) => {
+  let { id, unidad } = producto;
+  if (Array.isArray(productos) && productos.length > 0) {
+    let productoEncontrado = productos.find(
+      (producto) => producto.item === id && producto.unidad === unidad
+    );
+    if (productoEncontrado !== undefined) {
+      return { esExcluido: true, unidad: productoEncontrado.unidad };
+    } else {
+      return { esExcluido: false, unidad: "" };
+    }
+  } else {
+    return { esExcluido: false, unidad: "" };
+  }
+};
+const OrdenarArrayAleatoriamente = (array) => {
+  let arrayOrdenadoAleatoriamente = array.sort((a, b) => {
+    let numeroAleatorio = Math.floor(Math.random() * 2) - 1;
+    return numeroAleatorio;
+  });
+  return arrayOrdenadoAleatoriamente;
+};
+
+const ObtenerSubClasesDeUnaClase = (clase) => {
+  if (clase === "dulcesybotanas") {
+    return ["botanaagranel", "dulces", "galletas"];
+  } else if (clase === "cuidadopersonal") {
+    return ["perfumeria", "jabondetocador"];
+  } else if (clase === "lacteos") {
+    return ["lacteos"];
+  } else if (clase === "mascotas") {
+    return ["alimanima"];
+  } else if (clase === "salchichoneria") {
+    return ["carnesfrias"];
+  } else if (clase === "bebidas") {
+    return ["bebidasalcoholicas", "bebidas", "solubles", "jugos"];
+  } else if (clase === "farmacia") {
+    return ["medicament"];
+  } else if (clase === "veladoras") {
+    return ["veladoras"];
+  } else if (clase === "limpieza") {
+    return ["articulosdelimpieza", "detergente"];
+  } else if (clase === "basicosdelhogar") {
+    return [
+      "aceites",
+      "especias",
+      "basicos",
+      "pan",
+      "desechable",
+      "postres",
+      "enlatados",
+      "sopas",
+      "cereales",
+      "accesorios",
+      "chiles",
+      "granel",
+    ];
+  }
+};
+
+const removerAcentos = (palabra) => {
+  let nuevaPalabra = palabra.replace(new RegExp(/[ùúûü]/g), "u");
+  nuevaPalabra = nuevaPalabra.replace(new RegExp(/[àáâãäå]/g), "a");
+  nuevaPalabra = nuevaPalabra.replace(new RegExp(/[èéêë]/g), "e");
+  nuevaPalabra = nuevaPalabra.replace(new RegExp(/[ìíîï]/g), "i");
+  nuevaPalabra = nuevaPalabra.replace(new RegExp(/[òóôõö]/g), "o");
+
+  return nuevaPalabra;
+};
+
+const SeparaProductosPorTipo = (productos) => {
+  let productosDeRuta = [];
+  let productosDePuntoDeVenta = [];
+  productos.map((producto) => {
+    if (producto.presentacion === "RUTA") {
+      productosDeRuta.push(producto);
+    } else {
+      productosDePuntoDeVenta.push(producto);
+    }
+  });
+  const productosSeparadosPorTipo = {
+    productosDeRuta,
+    productosDePuntoDeVenta,
+  };
+  return productosSeparadosPorTipo;
+};
+
+const SepararProductosConExistenciaYSinExistencia = (productos) => {
+  let productosConExistencia = [];
+  let productosSinExistencia = [];
+  productos.map((producto) => {
+    let inventario = parseFloat(producto.inventario);
+    let factor = 1;
+    if (Array.isArray(producto.factor)) {
+      factor = parseFloat(producto.factor[0]);
+    } else {
+      factor = parseFloat(producto.factor);
+    }
+    let existencia = inventario / factor;
+    if (existencia >= 1) {
+      productosConExistencia.push(producto);
+    } else {
+      productosSinExistencia.push(producto);
+    }
+  });
+  const productosSeparadosPorExistencia = {
+    productosConExistencia,
+    productosSinExistencia,
+  };
+
+  return productosSeparadosPorExistencia;
+};
+
+const OrdernarProductosPorPrecio = (arrayDeProductos) => {
+  let nuevoArrayOrdenado = arrayDeProductos.sort((a, b) => {
+    let precioUno = 0;
+    let precioDos = 0;
+    let unidadPrincipalA = 0;
+    let unidadPrincipalB = 0;
+    if (a.unidadExcluida) {
+      unidadPrincipalA = 1;
+    }
+    if (b.unidadExcluida) {
+      unidadPrincipalB = 1;
+    }
+    if (Array.isArray(a.precio)) {
+      precioUno = a.precio[unidadPrincipalA];
+    } else {
+      precioUno = a.precio;
+    }
+    if (Array.isArray(b.precio)) {
+      precioDos = b.precio[unidadPrincipalB];
+    } else {
+      precioDos = b.precio;
+    }
+    return precioUno - precioDos;
+  });
+  return nuevoArrayOrdenado;
+};
+
+const ObtenerProductosYOfertasOrdenadas = (productos) => {
+  let { productosDeRuta, productosDePuntoDeVenta } =
+    SeparaProductosPorTipo(productos);
+  let productosDePuntoDeVentaSeparadosPorExistencia =
+    SepararProductosConExistenciaYSinExistencia(productosDePuntoDeVenta);
+  let productosDePuntoDeVentaConExistencia =
+    productosDePuntoDeVentaSeparadosPorExistencia.productosConExistencia;
+  let { productosConExistencia, productosSinExistencia } =
+    SepararProductosConExistenciaYSinExistencia(productosDeRuta);
+  let productosSinExistenciaGenerales = productosSinExistencia.concat(
+    productosDePuntoDeVentaSeparadosPorExistencia.productosSinExistencia
+  );
+  let productosDePuntoDeVentaOrdenadosPorPrecio = OrdernarProductosPorPrecio(
+    productosDePuntoDeVentaConExistencia
+  );
+  let productosEnglobados = productosConExistencia;
+  let productosSinExistenciaOrdenadosPorPrecio = OrdernarProductosPorPrecio(
+    productosSinExistenciaGenerales
+  );
+  let productosDeRutaYPuntoDeVenta = productosEnglobados.concat(
+    productosDePuntoDeVentaOrdenadosPorPrecio
+  );
+  let productosOrdenados = productosDeRutaYPuntoDeVenta.concat(
+    productosSinExistenciaOrdenadosPorPrecio
+  );
+  return productosOrdenados;
+};
+
 export default ObtenerListaDeProductosEnTexto;
 
 export {
@@ -383,4 +621,11 @@ export {
   ActualizarTotalDeProductosDelCarrito,
   JuntarOfertasConProductos,
   ObtenerFechaFormateada,
+  ExisteProducto,
+  ObtenerProductoValidadoActual,
+  ObtenerProductoValidado,
+  ObtenerSubClasesDeUnaClase,
+  removerAcentos,
+  OrdenarArrayAleatoriamente,
+  ObtenerProductosYOfertasOrdenadas,
 };

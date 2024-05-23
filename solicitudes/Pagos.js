@@ -42,6 +42,7 @@ const CrearOrdenDePagoDeConekta = (cliente, productos, res) => {
       { "accept-language": "es" }
     )
     .then(({ data }) => {
+      console.log(data);
       res.send(data);
     })
     .catch((err) => {
@@ -65,6 +66,7 @@ const CrearOrdenDePago = (req, res) => {
 
 const crearCobro = (req, res) => {
   let { token, idDeOrden, total } = req.body;
+  console.log(token, idDeOrden, total);
   let totalEntero = total * 100;
   sdk
     .ordersCreateCharge(
@@ -84,7 +86,15 @@ const crearCobro = (req, res) => {
       res.send({ err: false, data });
     })
     .catch((err) => {
-      res.send({ err: true, mensajeDeError: err.data.data.failure_code });
+      console.log(err.data.details);
+      if (err.data.type === "parameter_validation_error") {
+        return res.send({
+          err: true,
+          mensajeDeError: "La tarjeta no es valida",
+        });
+      } else {
+        res.send({ err: true, mensajeDeError: err.data.data.failure_code });
+      }
     });
 };
 

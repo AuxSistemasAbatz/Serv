@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import { v4 as uuidv4 } from "uuid";
 import { Solicitudes } from "../modelos/solicitudes/solicitudes.js";
 import { Cliente } from "../modelos/clientes/clientes.js";
-import { EnviarEmailDeCambioDeContra } from "../conexiones/email.js";
+import { EnviarEmailDeCambioDeContra } from "../conexiones/emailNode.js";
 import {
   desencriptarCorreo,
   encriptarContra,
